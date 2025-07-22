@@ -4,15 +4,16 @@ import { Message, CivicTopic, ReportData, Location } from '../types';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
 import { ChatInput } from './components/ChatInput';
-import { SuggestedQuestions } from './components/SuggestedQuestions';
 import { ResourceHub } from './components/ResourceHub';
 import { ReportBuilder } from './components/ReportBuilder';
-import { generateMockResponse, generateSuggestions } from './utils/mockAI';
+// Import only the response function, not suggestions
+import { getGeminiResponse } from '../src/services/gemini';
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
+  // Remove suggestions-related state
+  // const [suggestions, setSuggestions] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [resourceHubOpen, setResourceHubOpen] = useState(false);
   const [reportBuilderOpen, setReportBuilderOpen] = useState(false);
@@ -60,11 +61,8 @@ function App() {
     setIsTyping(true);
 
     try {
-      // Simulate AI thinking delay
-      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
-
-      // Generate AI response using mock AI
-      const aiResponse = generateMockResponse(content);
+      // Only get AI response, no suggestions
+      const aiResponse = await getGeminiResponse(content);
       const botResponse = {
         id: (Date.now() + 1).toString(),
         content: aiResponse,
@@ -75,14 +73,15 @@ function App() {
 
       setMessages(prev => [...prev, botResponse]);
 
-      // Generate suggestions
-      const newSuggestions = generateSuggestions(content);
-      setSuggestions(newSuggestions);
+      // NO SUGGESTIONS - completely removed
+
     } catch (error) {
       console.error('Error generating response:', error);
       const errorMessage = {
         id: (Date.now() + 1).toString(),
-        content: 'I apologize, but I\'m experiencing technical difficulties. Please try again.',
+        content: error.message.includes('Rate limited') 
+          ? 'I\'m currently receiving too many requests. Please wait a few minutes and try again.'
+          : 'I apologize, but I\'m experiencing technical difficulties. Please try again.',
         sender: 'bot',
         timestamp: new Date(),
         type: 'text'
@@ -101,7 +100,9 @@ function App() {
 
   const handleNewChat = () => {
     setMessages([]);
-    setSuggestions([]);
+    // Remove suggestions clearing
+    // setSuggestions([]);
+    setIsTyping(false);
     localStorage.removeItem('civicbot-messages');
     setSidebarOpen(false);
     
@@ -212,11 +213,7 @@ Thank you for helping improve our community!`;
         {/* Chat Window */}
         <ChatWindow messages={messages} isTyping={isTyping} />
 
-        {/* Suggested Questions */}
-        <SuggestedQuestions
-          suggestions={suggestions}
-          onSuggestionClick={handleSendMessage}
-        />
+        {/* Remove SuggestedQuestions component entirely */}
 
         {/* Chat Input */}
         <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
